@@ -37,5 +37,5 @@ When the player types the command, the plugin scans the area for entities within
 
 ### NOTES
 
-Currently, the plugin will not display items within range of a tool cupboard.  The goal here is to find resources and players, not scope out in the inside of someone's home.
+Currently, the plugin will not display items within range of a tool cupboard.  The goal here is to find resources and players, not scope out the inside of someone's home.
 
