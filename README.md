@@ -34,3 +34,8 @@ When the player types the command, the plugin scans the area for entities within
  - range -- How far out should the tool look for entities
  - duration -- How long should the text remain on screen
  - frequency -- How often are players allowed to use the command
+
+### NOTES
+
+Currently, the plugin will not display items within range of a tool cupboard.  The goal here is to find resources and players, not scope out in the inside of someone's home.
+
