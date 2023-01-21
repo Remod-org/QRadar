@@ -26,13 +26,14 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("QRadar", "RFC1920", "1.0.1")]
-    [Description("Simple player radar for world object")]
+    [Info("QRadar", "RFC1920", "1.0.2")]
+    [Description("Simple player radar for world objects")]
     internal class QRadar : RustPlugin
     {
         private ConfigData configData;
         private const string permUse = "qradar.use";
         private List<ulong> playerUse = new List<ulong>();
+
         [PluginReference]
         private readonly Plugin Friends, Clans;
 
@@ -103,14 +104,14 @@ namespace Oxide.Plugins
                         player?.SendConsoleCommand("ddraw.text", configData.duration, Color.cyan, ent.transform.position, $"<size=20>{entName}</size>");
                         continue;
                     }
-                    else if (ent is ResourceEntity && !(ent is OreResourceEntity))
-                    {
-                        player?.SendConsoleCommand("ddraw.text", configData.duration, Color.gray, ent.transform.position, $"<size=20>{entName}</size>");
-                        continue;
-                    }
                     else if (ent is OreResourceEntity)
                     {
                         player?.SendConsoleCommand("ddraw.text", configData.duration, Color.white, ent.transform.position, $"<size=20>{entName}</size>");
+                        continue;
+                    }
+                    else if (ent is ResourceEntity)
+                    {
+                        player?.SendConsoleCommand("ddraw.text", configData.duration, Color.gray, ent.transform.position, $"<size=20>{entName}</size>");
                         continue;
                     }
                     else if (ent is LootContainer)
@@ -120,6 +121,11 @@ namespace Oxide.Plugins
                     }
                     else if (ent is BasePlayer || ent is BaseAnimalNPC)
                     {
+                        if (ent is BasePlayer)
+                        {
+                            if (!iplayer.IsAdmin && !configData.showPlayersForAll) continue;
+                            else if (iplayer.IsAdmin && !configData.showPlayersForAdmin) continue;
+                        }
                         player?.SendConsoleCommand("ddraw.text", configData.duration, Color.red, ent.transform.position, $"<size=20>{entName}</size>");
                         continue;
                     }
@@ -136,6 +142,8 @@ namespace Oxide.Plugins
             public float range;
             public float duration;
             public float frequency;
+            public bool showPlayersForAdmin;
+            public bool showPlayersForAll;
 
             //public bool showEntiesInPrivilegeRange;
 
@@ -162,7 +170,9 @@ namespace Oxide.Plugins
                 playSound = true,
                 range = 50f,
                 duration = 10f,
-                frequency = 20f
+                frequency = 20f,
+                showPlayersForAdmin= true,
+                showPlayersForAll= false
             };
 
             SaveConfig(config);
