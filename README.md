@@ -8,6 +8,10 @@ When the player types the command, the plugin scans the area for entities within
 
  - /qradar -- Begin search from player location
 
+ This may be one of those commands you could bind to a key.  Open the F1 console and type, e.g.:
+
+  - bind y qradar
+
 ### Permission
 
  - qradar.use -- Allow running the command above
