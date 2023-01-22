@@ -1,6 +1,8 @@
-﻿#region License (GPL v2)
+#region License (GPL v2)
 /*
-    DESCRIPTION
+    QRadar - ALlow players to spawn a geiger counter and use it
+        to find and describe items, or simply find items without one
+
     Copyright (c) 2023 RFC1920 <desolationoutpostpve@gmail.com>
 
     This program is free software; you can redistribute it and/or
@@ -26,16 +28,20 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("QRadar", "RFC1920", "1.0.2")]
+    [Info("QRadar", "RFC1920", "1.0.3")]
     [Description("Simple player radar for world objects")]
     internal class QRadar : RustPlugin
     {
         private ConfigData configData;
         private const string permUse = "qradar.use";
+        private const string permHeld = "qradar.held";
         private List<ulong> playerUse = new List<ulong>();
 
+        private Dictionary<ulong, uint> issuedCounters = new Dictionary<ulong, uint>();
+
         [PluginReference]
-        private readonly Plugin Friends, Clans;
+        private readonly Plugin Backpacks;
+        //private readonly Plugin Friends, Clans;
 
         #region Message
         private string Lang(string key, string id = null, params object[] args) => string.Format(lang.GetMessage(key, this, id), args);
@@ -47,6 +53,13 @@ namespace Oxide.Plugins
         {
             lang.RegisterMessages(new Dictionary<string, string>
             {
+                ["addedto"] = "A geiger counter has been added to {0}",
+                ["alreadyin"] = "You already have a geigercounter in {0}",
+                ["issued"] = "You have already been issued a geiger counter today",
+                ["backpack"] = "your backpack",
+                ["belt"] = "your belt",
+                ["main"] = "your main inventory",
+                ["noroom"] = "You have no room to store a geigercoutner",
                 ["tooquick"] = "You must wait {0} seconds between radar bursts.",
                 ["notauthorized"] = "You don't have permission to do that !!"
             }, this);
@@ -55,16 +68,196 @@ namespace Oxide.Plugins
         private void OnServerInitialized()
         {
             permission.RegisterPermission(permUse, this);
+            permission.RegisterPermission(permHeld, this);
             LoadConfigVariables();
             AddCovalenceCommand("qradar", "cmdQRadar");
+            AddCovalenceCommand("qcounter", "cmdQCounter");
+        }
+
+        private object CanMoveItem(Item item, PlayerInventory playerLoot, uint targetContainer, int targetSlot, int amount)
+        {
+            if (configData?.specialHandlingForGC == false) return null;
+            if (item.info.itemid == 999690781)
+            {
+                // Preventing moving GC to anything other than the player's inventory or their Backpack.
+                BasePlayer player = playerLoot.GetComponent<BasePlayer>();
+                ItemContainer container = player.inventory.FindContainer(targetContainer);
+                if (container == player.inventory.containerBelt || container == player.inventory.containerMain)
+                {
+                    return null;
+                }
+                else if (Backpacks)
+                {
+                    ItemContainer backpack = Backpacks?.Call("API_GetBackpackContainer", player.userID) as ItemContainer;
+                    if (backpack != null && container == backpack) return null;
+                }
+                return true;
+            }
+            return null;
+        }
+
+        private void OnItemDropped(Item item, BaseEntity entity)
+        {
+            // Destroy GC when dropped
+            OnPlayerDropActiveItem(null, item);
+        }
+        private void OnPlayerDropActiveItem(BasePlayer player, Item item)
+        {
+            if (configData?.specialHandlingForGC == false) return;
+            // Destroy GC when dropped while active (on death, etc.)
+            if (item.info.itemid == 999690781)
+            {
+                item.GetHeldEntity()?.Kill();
+                item.DoRemove();
+            }
+        }
+
+        private object OnPlayerDeath(BasePlayer player, HitInfo info)
+        {
+            // Destroy GC on death
+            OnPlayerDisconnected(player);
+            return null;
+        }
+
+        private void OnPlayerConnected(BasePlayer player) => OnPlayerDisconnected(player);
+        private void OnPlayerDisconnected(BasePlayer player)
+        {
+            if (configData?.specialHandlingForGC == false) return;
+            // Destroy GC on connect/disconnect
+            Item foundInBelt = player.inventory.containerBelt.FindItemsByItemName("geiger.counter");
+            foundInBelt?.GetHeldEntity()?.Kill();
+            foundInBelt?.DoRemove();
+            player.inventory.containerBelt.MarkDirty();
+
+            Item foundInMain = player.inventory.containerMain.FindItemsByItemName("geiger.counter");
+            foundInMain?.GetHeldEntity()?.Kill();
+            foundInMain?.DoRemove();
+            player.inventory.containerMain.MarkDirty();
+
+            Item foundInBackpack = null;
+            if (Backpacks)
+            {
+                ItemContainer backpack = Backpacks?.Call("API_GetBackpackContainer", player.userID) as ItemContainer;
+                if (backpack != null)
+                {
+                    for (int i = 0; i < backpack.itemList.Count; i++)
+                    {
+                        if (backpack.itemList[i].info.itemid == 999690781)
+                        {
+                            foundInBackpack = backpack.itemList[i];
+                        }
+                    }
+                    foundInBackpack?.GetHeldEntity()?.Kill();
+                    foundInBackpack?.DoRemove();
+                    backpack.MarkDirty();
+                }
+            }
+            // Let them create a new one when they rejoin before plugin reload.
+            issuedCounters.Remove(player.userID);
+        }
+
+        private void OnPlayerInput(BasePlayer player, InputState input)
+        {
+            if (player == null || input == null) return;
+
+            GeigerCounter held = player.GetHeldEntity() as GeigerCounter;
+            if (held == null) return;
+            if (!permission.UserHasPermission(player.UserIDString, permHeld)) return;
+
+            if (input.WasJustPressed(BUTTON.FIRE_PRIMARY)) RunAreaScan(player.IPlayer, true);
+            else if (input.WasJustPressed(BUTTON.FIRE_SECONDARY)) RunLocalScan(player.IPlayer);
+        }
+
+        private void cmdQCounter(IPlayer iplayer, string command, string[] args)
+        {
+            if (!permission.UserHasPermission(iplayer.Id, permHeld)) { Message(iplayer, "notauthorized"); return; }
+            BasePlayer player = iplayer.Object as BasePlayer;
+
+            if (issuedCounters.ContainsKey(player.userID))
+            {
+                Message(iplayer, "");
+                return;
+            }
+
+            ItemContainer backpack = null;
+            if (player.inventory.containerBelt.FindItemsByItemName("geiger.counter") != null)
+            {
+                Message(iplayer, "alreadyin", Lang("belt"));
+                return;
+            }
+            if (player.inventory.containerMain.FindItemsByItemName("geiger.counter") != null)
+            {
+                Message(iplayer, "alreadyin", Lang("main"));
+                return;
+            }
+            if (Backpacks)
+            {
+                backpack = Backpacks?.Call("API_GetBackpackContainer", ulong.Parse(iplayer.Id)) as ItemContainer;
+                if (backpack != null)
+                {
+                    for (int i = 0; i < backpack.itemList.Count; i++)
+                    {
+                        if (backpack.itemList[i].info.itemid == 999690781)
+                        {
+                            Message(iplayer, "alreadyin", Lang("backpack"));
+                            return;
+                        }
+                    }
+                }
+            }
+
+            if (!player.inventory.containerBelt.IsFull())
+            {
+                Item item = ItemManager.CreateByItemID(999690781, 1, 0);
+                item.MoveToContainer(player.inventory.containerBelt);
+                issuedCounters.Add(player.userID, item.uid);
+                player.inventory.containerBelt.MarkDirty();
+                Message(iplayer, "addedto", Lang("belt"));
+                return;
+            }
+            if (!player.inventory.containerMain.IsFull())
+            {
+                Item item = ItemManager.CreateByItemID(999690781, 1, 0);
+                item.MoveToContainer(player.inventory.containerMain);
+                issuedCounters.Add(player.userID, item.uid);
+                player.inventory.containerMain.MarkDirty();
+                Message(iplayer, "addedto", Lang("main"));
+                return;
+            }
+            if (backpack?.IsFull() == false)
+            {
+                Item item = ItemManager.CreateByItemID(999690781, 1, 0);
+                item.MoveToContainer(backpack);
+                issuedCounters.Add(player.userID, item.uid);
+                backpack.MarkDirty();
+                Message(iplayer, "addedto", Lang("backpack"));
+                return;
+            }
+            Message(iplayer, "noroom");
         }
 
         private void cmdQRadar(IPlayer iplayer, string command, string[] args)
         {
             if (!permission.UserHasPermission(iplayer.Id, permUse)) { Message(iplayer, "notauthorized"); return; }
+            RunAreaScan(iplayer);
+        }
 
+        private void RunLocalScan(IPlayer iplayer)
+        {
             BasePlayer player = iplayer.Object as BasePlayer;
-            if (playerUse.Contains(player.userID)) { Message(iplayer, "tooquick", configData.frequency.ToString()); return; }
+            BaseEntity target = RaycastAll<BaseEntity>(player.eyes.HeadRay()) as BaseEntity;
+            if (target?.GetBuildingPrivilege() == null)
+            {
+                string nom = target?.GetType().Name;
+                if (string.IsNullOrEmpty(nom)) return;
+                Message(iplayer, $"[{Name}] {nom}:{target?.ShortPrefabName}");
+            }
+        }
+
+        private void RunAreaScan(IPlayer iplayer, bool gc = false)
+        {
+            BasePlayer player = iplayer.Object as BasePlayer;
+            if (playerUse.Contains(player.userID) && !gc) { Message(iplayer, "tooquick", configData.frequency.ToString()); return; }
 
             if (configData.playSound) Effect.server.Run("assets/bundled/prefabs/fx/invite_notice.prefab", player.transform.position);
 
@@ -136,6 +329,25 @@ namespace Oxide.Plugins
             timer.Once(configData.frequency, () => playerUse.Remove(player.userID));
         }
 
+        private object RaycastAll<T>(Ray ray) where T : BaseEntity
+        {
+            RaycastHit[] hits = Physics.RaycastAll(ray);
+            GamePhysics.Sort(hits);
+            const float distance = 100f;
+            object target = false;
+            foreach (RaycastHit hit in hits)
+            {
+                BaseEntity ent = hit.GetEntity();
+                if (ent is T && hit.distance < distance)
+                {
+                    target = ent;
+                    break;
+                }
+            }
+
+            return target;
+        }
+
         private class ConfigData
         {
             public bool playSound;
@@ -144,6 +356,7 @@ namespace Oxide.Plugins
             public float frequency;
             public bool showPlayersForAdmin;
             public bool showPlayersForAll;
+            public bool specialHandlingForGC;
 
             //public bool showEntiesInPrivilegeRange;
 
@@ -158,6 +371,11 @@ namespace Oxide.Plugins
         {
             configData = Config.ReadObject<ConfigData>();
 
+            if (configData.Version < new VersionNumber(1, 0, 3))
+            {
+                configData.specialHandlingForGC= true;
+            }
+
             configData.Version = Version;
             SaveConfig(configData);
         }
@@ -171,8 +389,9 @@ namespace Oxide.Plugins
                 range = 50f,
                 duration = 10f,
                 frequency = 20f,
-                showPlayersForAdmin= true,
-                showPlayersForAll= false
+                showPlayersForAdmin = true,
+                showPlayersForAll = false,
+                specialHandlingForGC = true
             };
 
             SaveConfig(config);
@@ -182,5 +401,15 @@ namespace Oxide.Plugins
         {
             Config.WriteObject(config, true);
         }
+
+        //private void LoadData()
+        //{
+        //    issuedCounters = Interface.Oxide.DataFileSystem.ReadObject<Dictionary<ulong, uint>>(Name + "/issued");
+        //}
+
+        //private void SaveData()
+        //{
+        //    Interface.Oxide.DataFileSystem.WriteObject(Name + "/issued", issuedCounters);
+        //}
     }
 }
