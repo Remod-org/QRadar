@@ -4,7 +4,7 @@ Simple player radar for world objects
 
 When the player types the command, the plugin scans the area for entities within a specified range.  It then places on-screen text at the location of those entities, color-coded by type.  This stays on the screen for a specified number of seconds.
 
-If the player also has the qradar.held permission, they can spawn a geiger counter.i
+If the player also has the qradar.held permission, they can spawn a geiger counter.
 
  - Once held, they can use the main FIRE button to perform the same scan as with the /qradar command.
  - They can also use the FIRE2 button to describe an item in front of them.
