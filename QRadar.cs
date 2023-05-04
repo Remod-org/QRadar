@@ -28,7 +28,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("QRadar", "RFC1920", "1.0.3")]
+    [Info("QRadar", "RFC1920", "1.0.4")]
     [Description("Simple player radar for world objects")]
     internal class QRadar : RustPlugin
     {
@@ -81,7 +81,7 @@ namespace Oxide.Plugins
             {
                 // Preventing moving GC to anything other than the player's inventory or their Backpack.
                 BasePlayer player = playerLoot.GetComponent<BasePlayer>();
-                ItemContainer container = player.inventory.FindContainer(targetContainer);
+                ItemContainer container = player.inventory.FindContainer(new ItemContainerId(targetContainer));
                 if (container == player.inventory.containerBelt || container == player.inventory.containerMain)
                 {
                     return null;
@@ -210,7 +210,7 @@ namespace Oxide.Plugins
             {
                 Item item = ItemManager.CreateByItemID(999690781, 1, 0);
                 item.MoveToContainer(player.inventory.containerBelt);
-                issuedCounters.Add(player.userID, item.uid);
+                issuedCounters.Add(player.userID, (uint)item.uid.Value);
                 player.inventory.containerBelt.MarkDirty();
                 Message(iplayer, "addedto", Lang("belt"));
                 return;
@@ -219,7 +219,7 @@ namespace Oxide.Plugins
             {
                 Item item = ItemManager.CreateByItemID(999690781, 1, 0);
                 item.MoveToContainer(player.inventory.containerMain);
-                issuedCounters.Add(player.userID, item.uid);
+                issuedCounters.Add(player.userID, (uint)item.uid.Value);
                 player.inventory.containerMain.MarkDirty();
                 Message(iplayer, "addedto", Lang("main"));
                 return;
@@ -228,7 +228,7 @@ namespace Oxide.Plugins
             {
                 Item item = ItemManager.CreateByItemID(999690781, 1, 0);
                 item.MoveToContainer(backpack);
-                issuedCounters.Add(player.userID, item.uid);
+                issuedCounters.Add(player.userID, (uint)item.uid.Value);
                 backpack.MarkDirty();
                 Message(iplayer, "addedto", Lang("backpack"));
                 return;
