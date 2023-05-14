@@ -28,7 +28,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("QRadar", "RFC1920", "1.0.4")]
+    [Info("QRadar", "RFC1920", "1.0.5")]
     [Description("Simple player radar for world objects")]
     internal class QRadar : RustPlugin
     {
@@ -74,14 +74,14 @@ namespace Oxide.Plugins
             AddCovalenceCommand("qcounter", "cmdQCounter");
         }
 
-        private object CanMoveItem(Item item, PlayerInventory playerLoot, uint targetContainer, int targetSlot, int amount)
+        private object CanMoveItem(Item item, PlayerInventory playerLoot, ItemContainerId targetContainer, int targetSlot, int amount)
         {
             if (configData?.specialHandlingForGC == false) return null;
             if (item.info.itemid == 999690781)
             {
                 // Preventing moving GC to anything other than the player's inventory or their Backpack.
                 BasePlayer player = playerLoot.GetComponent<BasePlayer>();
-                ItemContainer container = player.inventory.FindContainer(new ItemContainerId(targetContainer));
+                ItemContainer container = player.inventory.FindContainer(targetContainer);
                 if (container == player.inventory.containerBelt || container == player.inventory.containerMain)
                 {
                     return null;
