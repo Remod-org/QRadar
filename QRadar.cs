@@ -24,11 +24,12 @@ using Oxide.Core;
 using Oxide.Core.Libraries.Covalence;
 using Oxide.Core.Plugins;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("QRadar", "RFC1920", "1.0.5")]
+    [Info("QRadar", "RFC1920", "1.0.6")]
     [Description("Simple player radar for world objects")]
     internal class QRadar : RustPlugin
     {
@@ -124,12 +125,12 @@ namespace Oxide.Plugins
         {
             if (configData?.specialHandlingForGC == false) return;
             // Destroy GC on connect/disconnect
-            Item foundInBelt = player.inventory.containerBelt.FindItemsByItemName("geiger.counter");
+            Item foundInBelt = player.inventory.containerBelt.FindItemsByItemID(999690781).FirstOrDefault();// "geiger.counter");
             foundInBelt?.GetHeldEntity()?.Kill();
             foundInBelt?.DoRemove();
             player.inventory.containerBelt.MarkDirty();
 
-            Item foundInMain = player.inventory.containerMain.FindItemsByItemName("geiger.counter");
+            Item foundInMain = player.inventory.containerMain.FindItemsByItemID(999690781).FirstOrDefault();
             foundInMain?.GetHeldEntity()?.Kill();
             foundInMain?.DoRemove();
             player.inventory.containerMain.MarkDirty();
@@ -180,12 +181,12 @@ namespace Oxide.Plugins
             }
 
             ItemContainer backpack = null;
-            if (player.inventory.containerBelt.FindItemsByItemName("geiger.counter") != null)
+            if (player.inventory.containerBelt.FindItemsByItemID(999690781) != null)
             {
                 Message(iplayer, "alreadyin", Lang("belt"));
                 return;
             }
-            if (player.inventory.containerMain.FindItemsByItemName("geiger.counter") != null)
+            if (player.inventory.containerMain.FindItemsByItemID(999690781) != null)
             {
                 Message(iplayer, "alreadyin", Lang("main"));
                 return;
