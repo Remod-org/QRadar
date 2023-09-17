@@ -29,7 +29,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("QRadar", "RFC1920", "1.0.6")]
+    [Info("QRadar", "RFC1920", "1.0.7")]
     [Description("Simple player radar for world objects")]
     internal class QRadar : RustPlugin
     {
@@ -181,12 +181,13 @@ namespace Oxide.Plugins
             }
 
             ItemContainer backpack = null;
-            if (player.inventory.containerBelt.FindItemsByItemID(999690781) != null)
+            if (player.inventory.containerBelt.FindItemsByItemID(999690781).FirstOrDefault() != null)
             {
                 Message(iplayer, "alreadyin", Lang("belt"));
                 return;
             }
-            if (player.inventory.containerMain.FindItemsByItemID(999690781) != null)
+            if (player.inventory.containerMain.FindItemsByItemID(999690781).FirstOrDefault() != null)
+            // Play effect on exit portal, since both entranc
             {
                 Message(iplayer, "alreadyin", Lang("main"));
                 return;
