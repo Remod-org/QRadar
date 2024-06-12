@@ -29,7 +29,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("QRadar", "RFC1920", "1.0.7")]
+    [Info("QRadar", "RFC1920", "1.0.8")]
     [Description("Simple player radar for world objects")]
     internal class QRadar : RustPlugin
     {
@@ -60,7 +60,7 @@ namespace Oxide.Plugins
                 ["backpack"] = "your backpack",
                 ["belt"] = "your belt",
                 ["main"] = "your main inventory",
-                ["noroom"] = "You have no room to store a geigercoutner",
+                ["noroom"] = "You have no room to store a geigercounter",
                 ["tooquick"] = "You must wait {0} seconds between radar bursts.",
                 ["notauthorized"] = "You don't have permission to do that !!"
             }, this);
@@ -375,7 +375,7 @@ namespace Oxide.Plugins
 
             if (configData.Version < new VersionNumber(1, 0, 3))
             {
-                configData.specialHandlingForGC= true;
+                configData.specialHandlingForGC = true;
             }
 
             configData.Version = Version;
@@ -406,12 +406,12 @@ namespace Oxide.Plugins
 
         //private void LoadData()
         //{
-        //    issuedCounters = Interface.Oxide.DataFileSystem.ReadObject<Dictionary<ulong, uint>>(Name + "/issued");
+        //    issuedCounters = Interface.GetMod().DataFileSystem.ReadObject<Dictionary<ulong, uint>>(Name + "/issued");
         //}
 
         //private void SaveData()
         //{
-        //    Interface.Oxide.DataFileSystem.WriteObject(Name + "/issued", issuedCounters);
+        //    Interface.GetMod().DataFileSystem.WriteObject(Name + "/issued", issuedCounters);
         //}
     }
 }
