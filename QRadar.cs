@@ -29,16 +29,17 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("QRadar", "RFC1920", "1.0.8")]
+    [Info("QRadar", "RFC1920", "1.0.9")]
     [Description("Simple player radar for world objects")]
     internal class QRadar : RustPlugin
     {
         private ConfigData configData;
         private const string permUse = "qradar.use";
+        private const string permSeeNPC = "qradar.npc";
         private const string permHeld = "qradar.held";
-        private List<ulong> playerUse = new List<ulong>();
+        private List<ulong> playerUse = new();
 
-        private Dictionary<ulong, uint> issuedCounters = new Dictionary<ulong, uint>();
+        private Dictionary<ulong, uint> issuedCounters = new();
 
         [PluginReference]
         private readonly Plugin Backpacks;
@@ -116,6 +117,7 @@ namespace Oxide.Plugins
         private object OnPlayerDeath(BasePlayer player, HitInfo info)
         {
             // Destroy GC on death
+            if (!player.userID.IsSteamId()) return null;
             OnPlayerDisconnected(player);
             return null;
         }
@@ -124,6 +126,7 @@ namespace Oxide.Plugins
         private void OnPlayerDisconnected(BasePlayer player)
         {
             if (configData?.specialHandlingForGC == false) return;
+            if (!player.userID.IsSteamId()) return;
             // Destroy GC on connect/disconnect
             Item foundInBelt = player.inventory.containerBelt.FindItemsByItemID(999690781).FirstOrDefault();// "geiger.counter");
             foundInBelt?.GetHeldEntity()?.Kill();
@@ -314,6 +317,10 @@ namespace Oxide.Plugins
                         player?.SendConsoleCommand("ddraw.text", configData.duration, Color.magenta, ent.transform.position, $"<size=20>{entName}</size>");
                         continue;
                     }
+                    else if (ent is ScientistNPC && permission.UserHasPermission(player.UserIDString, permSeeNPC))
+                    {
+                        player?.SendConsoleCommand("ddraw.text", configData.duration, Color.red, ent.transform.position, $"<size=20>{entName}</size>");
+                    }
                     else if (ent is BasePlayer || ent is BaseAnimalNPC)
                     {
                         if (ent is BasePlayer)
@@ -385,7 +392,7 @@ namespace Oxide.Plugins
         protected override void LoadDefaultConfig()
         {
             Puts("Creating new config file.");
-            ConfigData config = new ConfigData()
+            ConfigData config = new()
             {
                 playSound = true,
                 range = 50f,
