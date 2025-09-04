@@ -24,12 +24,11 @@ using Oxide.Core;
 using Oxide.Core.Libraries.Covalence;
 using Oxide.Core.Plugins;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("QRadar", "RFC1920", "1.0.9")]
+    [Info("QRadar", "RFC1920", "1.1.0")]
     [Description("Simple player radar for world objects")]
     internal class QRadar : RustPlugin
     {
@@ -128,12 +127,13 @@ namespace Oxide.Plugins
             if (configData?.specialHandlingForGC == false) return;
             if (!player.userID.IsSteamId()) return;
             // Destroy GC on connect/disconnect
-            Item foundInBelt = player.inventory.containerBelt.FindItemsByItemID(999690781).FirstOrDefault();// "geiger.counter");
+            //Item foundInBelt = player.inventory.containerBelt.FindItemsByItemID(null, 999690781).FirstOrDefault();// "geiger.counter");
+            Item foundInBelt = player.inventory.containerBelt.FindItemByItemID(999690781);
             foundInBelt?.GetHeldEntity()?.Kill();
             foundInBelt?.DoRemove();
             player.inventory.containerBelt.MarkDirty();
 
-            Item foundInMain = player.inventory.containerMain.FindItemsByItemID(999690781).FirstOrDefault();
+            Item foundInMain = player.inventory.containerMain.FindItemByItemID(999690781);
             foundInMain?.GetHeldEntity()?.Kill();
             foundInMain?.DoRemove();
             player.inventory.containerMain.MarkDirty();
@@ -184,12 +184,12 @@ namespace Oxide.Plugins
             }
 
             ItemContainer backpack = null;
-            if (player.inventory.containerBelt.FindItemsByItemID(999690781).FirstOrDefault() != null)
+            if (player.inventory.containerBelt.FindItemByItemID(999690781) != null)
             {
                 Message(iplayer, "alreadyin", Lang("belt"));
                 return;
             }
-            if (player.inventory.containerMain.FindItemsByItemID(999690781).FirstOrDefault() != null)
+            if (player.inventory.containerMain.FindItemByItemID(999690781) != null)
             // Play effect on exit portal, since both entranc
             {
                 Message(iplayer, "alreadyin", Lang("main"));
