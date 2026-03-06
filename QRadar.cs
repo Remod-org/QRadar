@@ -23,12 +23,13 @@
 using Oxide.Core;
 using Oxide.Core.Libraries.Covalence;
 using Oxide.Core.Plugins;
+using Rust.Ai.Gen2;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("QRadar", "RFC1920", "1.1.0")]
+    [Info("QRadar", "RFC1920", "1.1.1")]
     [Description("Simple player radar for world objects")]
     internal class QRadar : RustPlugin
     {
@@ -321,7 +322,7 @@ namespace Oxide.Plugins
                     {
                         player?.SendConsoleCommand("ddraw.text", configData.duration, Color.red, ent.transform.position, $"<size=20>{entName}</size>");
                     }
-                    else if (ent is BasePlayer || ent is BaseAnimalNPC)
+                    else if (ent is BasePlayer || ent is BaseAnimalNPC || ent is BaseNPC2)
                     {
                         if (ent is BasePlayer)
                         {

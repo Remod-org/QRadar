@@ -27,6 +27,7 @@ If the player also has the qradar.held permission, they can spawn a geiger count
 ### Permission
 
  - qradar.use -- Allow running the the /qradar command
+ - qradar.npc -- Allow players to see NPCs (ScientistNPC)
  - qradar.held -- Allow spawning of a geiger counter using /qcounter (limit of one)
 
 ### Configuration
@@ -36,13 +37,13 @@ If the player also has the qradar.held permission, they can spawn a geiger count
   "range": 50.0,
   "duration": 10.0,
   "frequency": 20.0,
-  "showPlayersForAdmin" : true,
+  "showPlayersForAdmin": false,
   "showPlayersForAll": false,
   "specialHandlingForGC": true,
   "Version": {
     "Major": 1,
     "Minor": 0,
-    "Patch": 3
+    "Patch": 8
   }
 }
 ```
