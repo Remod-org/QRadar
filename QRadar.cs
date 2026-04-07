@@ -25,11 +25,12 @@ using Oxide.Core.Libraries.Covalence;
 using Oxide.Core.Plugins;
 using Rust.Ai.Gen2;
 using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("QRadar", "RFC1920", "1.1.1")]
+    [Info("QRadar", "RFC1920", "1.1.2")]
     [Description("Simple player radar for world objects")]
     internal class QRadar : RustPlugin
     {
@@ -58,6 +59,8 @@ namespace Oxide.Plugins
                 ["addedto"] = "A geiger counter has been added to {0}",
                 ["alreadyin"] = "You already have a geigercounter in {0}",
                 ["issued"] = "You have already been issued a geiger counter today",
+                ["qrhelp"] = "/qradar: Scan the local area",
+                ["qcounterhelp"] = "/qcounter: Spawn a geiger counter to scan the local area",
                 ["backpack"] = "your backpack",
                 ["belt"] = "your belt",
                 ["main"] = "your main inventory",
@@ -337,6 +340,23 @@ namespace Oxide.Plugins
             }
             playerUse.Add(player.userID);
             timer.Once(configData.frequency, () => playerUse.Remove(player.userID));
+        }
+
+        [HookMethod("SendHelpText")]
+        private void SendHelpText(BasePlayer player)
+        {
+            if (player.IPlayer.HasPermission(permUse))
+            {
+                StringBuilder sb = new();
+                sb.Append("<color=#05eb59>").Append(Name).Append(' ').Append(Version).Append(" - ").Append(Description).Append("</color>\n");
+                sb.Append(Lang("qrhelp")).Append("\n");
+
+                if (player.IPlayer.HasPermission(permHeld))
+                {
+                    sb.Append(Lang("qcounterhelp")).Append("\n");
+                }
+                player.ChatMessage(sb.ToString());
+            }
         }
 
         private object RaycastAll<T>(Ray ray) where T : BaseEntity
